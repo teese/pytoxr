@@ -14,7 +14,7 @@ import re
 import sys
 import numpy as np
 
-def parse_toxr_softmax(txt_path, samples_path):
+def parse_softmax(txt_path, samples_path):
     """Parse the text file output from Sofmax Pro, using the standard A600 endpoint & A405 kinetic template.
     This method uses the initial velocities calculated by Softmax Pro.
 
@@ -347,7 +347,7 @@ def parse_toxr_softmax(txt_path, samples_path):
 
     return dfd
 
-def parse_all_toxr_in_folder(target_dir):
+def parse_all_data_files_in_folder(target_dir):
     """Parse all ToxR SoftMax Pro txt files in a given directory.
 
     Parameters
@@ -366,7 +366,7 @@ def parse_all_toxr_in_folder(target_dir):
         pda_file_path = txt_file[:-4] + ".pda"
         samples_file_path = txt_file[:-4] + ".xls"
         if os.path.isfile(pda_file_path) and os.path.isfile(samples_file_path):
-            dfd = parse_toxr_softmax(txt_file, samples_file_path)
+            dfd = parse_softmax(txt_file, samples_file_path)
             counter += 1
 
     sys.stdout.write("\n\nparse_all_toxr_in_folder finished. {} files parsed in total.\n-----------------------------------------------------------------\n".format(counter))

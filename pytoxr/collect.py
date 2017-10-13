@@ -15,7 +15,7 @@ import sys
 import numpy as np
 from scipy.stats import ttest_ind
 
-def collect_toxr_data_in_folder(target_dir):
+def collect_data_in_folder(target_dir):
     """ Collect all ToxR data in a directory, and save in a subdirectory "collected".
 
     Parameters
@@ -25,7 +25,7 @@ def collect_toxr_data_in_folder(target_dir):
         Also should contain subdirectories with parsed data from SoftMax Pro to excel/csv tables.
 
     """
-    sys.stdout.write("Starting collect_toxr_data_in_folder.\n")
+    sys.stdout.write("Starting collect_data_in_folder.\n")
     sys.stdout.flush()
 
     collect_out_dir = os.path.join(target_dir, "collected")
@@ -260,7 +260,7 @@ def collect_toxr_data_in_folder(target_dir):
         plt.savefig(box_path[:-4] + ".pdf")
         plt.close("all")
 
-    sys.stdout.write("\n\ncollect_toxr_data_in_folder is finished. Data from {} files collected in total.\n-----------------------------------------------------------------\n".format(n+1))
+    sys.stdout.write("\n\ncollect_data_in_folder is finished. Data from {} files collected in total.\n-----------------------------------------------------------------\n".format(n+1))
     sys.stdout.flush()
 
     writer.close()
