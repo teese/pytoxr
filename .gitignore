@@ -99,3 +99,12 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# pycharm stuff
+.idea/
+.idea
+.idea\
+*cs.xml
+vcs.xml
+/.idea
+/pytoxr/.idea/
