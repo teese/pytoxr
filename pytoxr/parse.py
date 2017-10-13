@@ -347,7 +347,7 @@ def parse_softmax(txt_path, samples_path):
 
     return dfd
 
-def parse_all_data_files_in_folder(target_dir):
+def parse_all_data_files_in_folder(target_dir, reparse_existing=False):
     """Parse all ToxR SoftMax Pro txt files in a given directory.
 
     Parameters
@@ -365,9 +365,22 @@ def parse_all_data_files_in_folder(target_dir):
         #print(txt_file)
         pda_file_path = txt_file[:-4] + ".pda"
         samples_file_path = txt_file[:-4] + ".xls"
+        exp_name = os.path.basename(txt_file)[:-4][0:60]
+        out_dir = os.path.join(os.path.dirname(txt_file), exp_name)
+        excel_format = ".xls"
+        out_parsed_excel = os.path.join(out_dir, "{}_parsed{}".format(exp_name, excel_format))
+
+
         if os.path.isfile(pda_file_path) and os.path.isfile(samples_file_path):
+            if not reparse_existing:
+                if os.path.isfile(out_parsed_excel):
+                    # skip analysis of this file
+                    sys.stdout.write("\n{} skipped, parsed output file already exists.".format(exp_name))
+                    sys.stdout.flush()
+                    continue
+
             dfd = parse_softmax(txt_file, samples_file_path)
             counter += 1
 
-    sys.stdout.write("\n\nparse_all_toxr_in_folder finished. {} files parsed in total.\n-----------------------------------------------------------------\n".format(counter))
+    sys.stdout.write("\n\nparse_all_data_files_in_folder is finished.\n{} file(s) parsed in total.\n-----------------------------------------------------------------\n".format(counter))
     sys.stdout.flush()
