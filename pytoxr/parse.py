@@ -101,7 +101,7 @@ def parse_softmax(txt_path, samples_path):
         raise TypeError("VersaMax exported text file seems to have an unknown decimal format. Try re-exporting data.")
 
     # open csv as a pandas dataframe, starting from "Sample	Wells	Sample#	V/max	Vmax/OD600	Mean" ...etc
-    df = pd.read_csv(txt_path, sep='\t', skiprows=group_results_line+1, decimal=dec, engine="python")
+    df = pd.read_csv(txt_path, sep='\t', skiprows=group_results_line+1, decimal=dec)
     # drop the last footer rows, which may vary in length
     df.dropna(subset=["V/max"], inplace=True)
     # fill the names downwards, so that they can be used for creating pivot tables later
@@ -130,7 +130,7 @@ def parse_softmax(txt_path, samples_path):
     # calculate OD from V and V/OD (not currently supplied by the template)
     df["OD"] = df["V/max"] / df["Vmax/OD600"]
 
-    df.to_csv(r"B:\xbackups\MarkTeese\Praktikum\2017 MEM & MEM PROTEINS\2017_data\mt_test\tempcsv.csv")
+
     """
     df should look like this. Basically, it looks like the SoftMax pro output using Jan Kirrbach's template.
 
