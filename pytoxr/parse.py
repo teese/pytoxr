@@ -200,9 +200,7 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
 
     """
     pandas versions seem to use a different skiprows
-    
     need to check that the skiprows is correctly aligned
-    
     Group:	Results Kinetic	1
     Sample	Wells	Sample#	V/max	Vmax/OD600	Mean	SD
     Vm01	A1	1	55,264	790,996	776,806	48,225
