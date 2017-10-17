@@ -172,6 +172,7 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
     group_results_line = 0
     first_line_with_data_int = None
     first_line_with_data = None
+    start_of_table = None
 
     with open(txt_path, "r") as f:
         for n, line in enumerate(f):
@@ -180,6 +181,9 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
                 group_results_are_found = True
                 group_results_line = n
                 first_line_with_data_int = group_results_line + 2
+                start_of_table = group_results_line+1
+            if n == start_of_table:
+                start_of_table_data = line
             if n == first_line_with_data_int:
                 first_line_with_data = line
 
@@ -194,8 +198,24 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
     else:
         raise TypeError("VersaMax exported text file seems to have an unknown decimal format. Try re-exporting data.")
 
+    """
+    pandas versions seem to use a different skiprows
+    
+    need to check that the skiprows is correctly aligned
+    
+    Group:	Results Kinetic	1
+    Sample	Wells	Sample#	V/max	Vmax/OD600	Mean	SD
+    Vm01	A1	1	55,264	790,996	776,806	48,225
+    """
+
+    if "Sample" in start_of_table_data:
+        skiprows = group_results_line
+    elif "Group" in start_of_table_data:
+        skiprows = group_results_line + 1
+    else:
+        raise ValueError("skiprows does not work. check txt file format.")
     # open csv as a pandas dataframe, starting from "Sample	Wells	Sample#	V/max	Vmax/OD600	Mean" ...etc
-    df = pd.read_csv(txt_path, sep='\t', skiprows=group_results_line+1, decimal=dec)
+    df = pd.read_csv(txt_path, sep='\t', skiprows=skiprows, decimal=dec)
     # drop the last footer rows, which may vary in length
     df.dropna(subset=["V/max"], inplace=True)
     # fill the names downwards, so that they can be used for creating pivot tables later
