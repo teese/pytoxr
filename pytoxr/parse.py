@@ -5,7 +5,7 @@ pytoxr contains tools for the analysis of data from ToxR experiments
 
 Copyright (C) 2016  Mark George Teese
 
-This software is licensed under the permissive MIT License.
+This software is licensed under the permissive MIT License...
 """
 import glob
 import numpy as np
