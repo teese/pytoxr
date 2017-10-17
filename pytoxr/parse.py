@@ -199,6 +199,7 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
         raise TypeError("VersaMax exported text file seems to have an unknown decimal format. Try re-exporting data.")
 
     """
+    .
     pandas versions seem to use a different skiprows
     need to check that the skiprows is correctly aligned
     Group:	Results Kinetic	1
