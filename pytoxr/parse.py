@@ -73,16 +73,37 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
     """
 
     # go through each line, searching for the various components
-    regex_search_string = "Plate:\sOD600"
+    OD600_regex_search_string = "Plate:\sOD600"
     # regex_search_string = "Group:\s+Results Kinetic\s+1"
     OD600_plate_is_found = False
     OD600_plate_line = 0
     first_line_with_OD600_data_int = None
     first_line_with_OD600_data = None
 
+
+
+    """
+    CHECK IF "OD600" or "Cell Density (OD600)" is used in this template.
+    Plate:	Cell Density (OD600)	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1	8	None
+        Temperature(¡C)	1	2	3	4	5	6	7	8	9	10	11	12
+        28,00	0,109467	0,119067	0,119167	0,112067	0,140267	0,126567	0,043267	0,052867	0,053967	0,052567	0,052567	0,052767
+
+    """
+    OD600_regex_search_string = None
+    with open(txt_path, "r") as f:
+        for line in f:
+            if "Cell Density (OD600)" in line:
+                OD600_regex_search_string = "Plate:\sCell\sDensity\s\(OD600\)"
+                break
+            if "Plate:\tOD600" in line:
+                OD600_regex_search_string = "Plate:\sOD600"
+                break
+        if OD600_regex_search_string is None:
+            raise ValueError("Line with OD600 not found in text template. Check text output file.")
+
     with open(txt_path, "r") as f:
         for n, line in enumerate(f):
-            match = re.match(regex_search_string, line)
+            match = re.match(OD600_regex_search_string, line)
             if match:
                 OD600_plate_is_found = True
                 OD600_plate_line = n
@@ -90,6 +111,9 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
             if n == first_line_with_OD600_data_int:
                 first_line_with_OD600_data = line
     total_n_lines = n
+
+    if not OD600_plate_is_found:
+        raise ValueError("Line with OD600 not found in text template. Check text output file.")
 
     table_start = first_line_with_OD600_data_int
     table_end = first_line_with_OD600_data_int + 8
@@ -198,23 +222,36 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
     else:
         raise TypeError("VersaMax exported text file seems to have an unknown decimal format. Try re-exporting data.")
 
-    """
-    .
-    pandas versions seem to use a different skiprows
-    need to check that the skiprows is correctly aligned
-    Group:	Results Kinetic	1
-    Sample	Wells	Sample#	V/max	Vmax/OD600	Mean	SD
-    Vm01	A1	1	55,264	790,996	776,806	48,225
-    """
+    skiprows = group_results_line
 
-    if "Sample" in start_of_table_data:
-        skiprows = group_results_line
-    elif "Group" in start_of_table_data:
-        skiprows = group_results_line + 1
-    else:
-        raise ValueError("skiprows does not work. check txt file format.")
+    # DEPRECATED. DID NOT WORK.
+    # if "Sample" in start_of_table_data:
+    #     skiprows = group_results_line
+    # elif "Group" in start_of_table_data:
+    #     skiprows = group_results_line + 1
+    # else:
+    #     raise ValueError("skiprows does not work. check txt file format.")
+
     # open csv as a pandas dataframe, starting from "Sample	Wells	Sample#	V/max	Vmax/OD600	Mean" ...etc
     df = pd.read_csv(txt_path, sep='\t', skiprows=skiprows, decimal=dec)
+
+    if 'Sample' not in df.columns:
+        """
+        .
+        pandas versions seem to use a different skiprows method
+        need to check that the skiprows is correctly aligned
+        Group:	Results Kinetic	1
+        Sample	Wells	Sample#	V/max	Vmax/OD600	Mean	SD
+        Vm01	A1	1	55,264	790,996	776,806	48,225
+        """
+        if "Group:" in df.columns:
+            skiprows = group_results_line + 1
+            df = pd.read_csv(txt_path, sep='\t', skiprows=skiprows, decimal=dec)
+
+        else:
+            raise ValueError("Pandas has tried to make a dataframe from OD600 values, but can't seem to locate the header.\n"
+                             "Check text file for output.\nCurrent dataframe columns : {}.".format(df.columns))
+
     # drop the last footer rows, which may vary in length
     df.dropna(subset=["V/max"], inplace=True)
     # fill the names downwards, so that they can be used for creating pivot tables later
@@ -456,6 +493,8 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
         writer.close()
 
     sys.stdout.write("\n'{}' parsed successfully".format(exp_name))
+    if skiprows == group_results_line + 1:
+        sys.stdout.write("   (Note: You may have an older version of Pandas or python. A skiprows error has been averted.)")
     sys.stdout.flush()
 
     return dfd
