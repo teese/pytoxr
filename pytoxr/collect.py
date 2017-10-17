@@ -114,12 +114,18 @@ def collect_data_in_folder(target_dir):
     df.sort_values("order", inplace=True)
 
     ttest_standard_cols = ["{}||ttest_standard".format(n) for n in range(n)]
-    df_ttest_standard = df[ttest_standard_cols].copy()
-    df_ttest_standard = df_ttest_standard.dropna(how="all")
-    if df_ttest_standard.shape[0] == 1:
-        ttest_standard = df_ttest_standard.index[0]
+    ttest_standard_columns = set(ttest_standard_cols).intersection(set(df.index))
+    # check that there are actually some ttest standards labelled
+    if ttest_standard_columns != set():
+        conduct_ttest = True
+        df_ttest_standard = df[ttest_standard_cols].copy()
+        df_ttest_standard = df_ttest_standard.dropna(how="all")
+        if df_ttest_standard.shape[0] == 1:
+            ttest_standard = df_ttest_standard.index[0]
+        else:
+            raise ValueError("seems to be more than one ttest_standard selected in the original sample excel files.")
     else:
-        raise ValueError("seems to be more than one ttest_standard selected in the original sample excel files.")
+        conduct_ttest = False
 
     mean_column_list = ["{}||OD_mean", "{}||Vi_mean", "{}||MU_mean"]
     writer = pd.ExcelWriter(collected_excel)
@@ -182,22 +188,23 @@ def collect_data_in_folder(target_dir):
         df_sel_describe["sem"] = df_sel_describe["std"] / np.sqrt(df_sel_describe["count"])
         df_sel_describe["order"] = order_ser
 
-        # get the standard "wildtype" data for the TTEST
-        ttest_standard_data = df_sel.loc[ttest_standard, :]
+        if conduct_ttest:
+            # get the standard "wildtype" data for the TTEST
+            ttest_standard_data = df_sel.loc[ttest_standard, :]
 
-        samples_to_run_ttest = df_sel.index.tolist()
-        samples_to_run_ttest.remove(ttest_standard)
+            samples_to_run_ttest = df_sel.index.tolist()
+            samples_to_run_ttest.remove(ttest_standard)
 
-        for sample_name in samples_to_run_ttest:
-            data = df_sel.loc[sample_name, :].dropna()
-            if len(data) > 1 and len(ttest_standard_data) > 1:
-                p_value = ttest_ind(ttest_standard_data, data)[1]
-            else:
-                p_value = np.nan
-            df_sel_describe.loc[sample_name, "ttest_p_value"] = p_value
+            for sample_name in samples_to_run_ttest:
+                data = df_sel.loc[sample_name, :].dropna()
+                if len(data) > 1 and len(ttest_standard_data) > 1:
+                    p_value = ttest_ind(ttest_standard_data, data)[1]
+                else:
+                    p_value = np.nan
+                df_sel_describe.loc[sample_name, "ttest_p_value"] = p_value
 
-        df_sel_describe["sign_stars"] = df_sel_describe["ttest_p_value"].apply(return_p_value_stars)
-        df_sel_describe["ttest_significant"] = df_sel_describe["ttest_p_value"] < 0.05
+            df_sel_describe["sign_stars"] = df_sel_describe["ttest_p_value"].apply(return_p_value_stars)
+            df_sel_describe["ttest_significant"] = df_sel_describe["ttest_p_value"] < 0.05
         df_sel_describe.to_excel(writer, sheet_name=excel_tab_name + "_describe")
 
         max_value = df_sel_describe["max"].max()
@@ -222,14 +229,16 @@ def collect_data_in_folder(target_dir):
         # sign_ser.index = range(sign_ser.shape[0])
         # sign_ser.dropna(inplace=True)
 
-        df_sel_describe["#"] = range(1, df_sel_describe.shape[0] + 1)
-        sign_df = df_sel_describe.dropna(subset=["sign_stars"])
 
-        for sample in sign_df.index:
-            x = sign_df.loc[sample, "#"] - 1
-            y = sign_df.loc[sample, "mean"]
-            sign_star = sign_df.loc[sample, "sign_stars"]
-            ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
+        if conduct_ttest:
+            df_sel_describe["#"] = range(1, df_sel_describe.shape[0] + 1)
+            sign_df = df_sel_describe.dropna(subset=["sign_stars"])
+
+            for sample in sign_df.index:
+                x = sign_df.loc[sample, "#"] - 1
+                y = sign_df.loc[sample, "mean"]
+                sign_star = sign_df.loc[sample, "sign_stars"]
+                ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
         ax.set_title(title)
         ax.set_ylabel(y_axis_label)
         #ax.errorbar(range(df_sel_describe.shape[0]), df_sel_describe['mean'], yerr=df_sel_describe['sem'])
@@ -246,11 +255,12 @@ def collect_data_in_folder(target_dir):
         ax.set_title(title)
         ax.set_ylabel(y_axis_label)
 
-        for sample in sign_df.index:
-            x = sign_df.loc[sample, "#"]
-            y = sign_df.loc[sample, "75%"]
-            sign_star = sign_df.loc[sample, "sign_stars"]
-            ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
+        if conduct_ttest:
+            for sample in sign_df.index:
+                x = sign_df.loc[sample, "#"]
+                y = sign_df.loc[sample, "75%"]
+                sign_star = sign_df.loc[sample, "sign_stars"]
+                ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
         if data_is_normalised:
             if max_value > 6:
                 ylim_min = ax.get_ylim()[0]
