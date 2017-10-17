@@ -8,11 +8,12 @@ Copyright (C) 2016  Mark George Teese
 This software is licensed under the permissive MIT License.
 """
 import glob
+import numpy as np
 import os
 import pandas as pd
 import re
+import seaborn as sns
 import sys
-import numpy as np
 
 def parse_softmax(txt_path, samples_path):
     """Parse the text file output from Sofmax Pro, using the standard A600 endpoint & A405 kinetic template.
@@ -41,6 +42,8 @@ def parse_softmax(txt_path, samples_path):
     """
     exp_name = os.path.basename(txt_path)[:-4][0:60]
     out_dir = os.path.join(os.path.dirname(txt_path), exp_name)
+    # path to output heatmap of raw OD600 values
+    out_OD600_heatmap = os.path.join(out_dir, "{}_OD600_heatmap.png".format(exp_name))
     # path to excel output file
     # for compatibility purposes, currently only excel 2003 is recommended
     excel_format = ".xls"
@@ -54,7 +57,98 @@ def parse_softmax(txt_path, samples_path):
 
 
     """
-    FORMAT OF THE INPUT SOFTMAX PRO FILE
+    FORMAT OF THE OD600 section of the SOFTMAX PRO FILE
+
+~End
+Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1	8	None
+	Temperature(¡C)	1	2	3	4	5	6	7	8	9	10	11	12
+	24,10	0,1094	0,1322	0,121	0,117	0,1214	0,1239	0,1128	0,1219	0,1191	0,1152	0,1172	0,1164
+		0,153	0,1564	0,1582	0,1518	0,1636	0,1528	0,1448	0,1651	0,1371	0,1484	0,1491	0,1509
+		0,1194	0,1218	0,1266	0,12	0,1171	0,1252	0,1155	0,1227	0,123	0,1204	0,1221	0,1159
+		0,1217	0,1237	0,1239	0,119	0,1217	0,1245	0,1168	0,1241	0,1207	0,1168	0,1203	0,1203
+		0,1152	0,119	0,1402	0,1184	0,1443	0,1219	0,1193	0,1254	0,1206	0,1173	0,1167	0,1165
+		0,1253	0,1313	0,1435	0,1232	0,1261	0,1298	0,1239	0,1315	0,1133	0,1193	0,1157	0,1178
+		0,1136	0,1143	0,1359	0,1172	0,1373	0,1275	0,1159	0,1281	0,1224	0,1195	0,1168	0,1143
+		0,1078	0,1206	0,1243	0,1139	0,1199	0,1229	0,1172	0,121	0,1206	0,0379	0,0382	0,0407
+    """
+
+    # go through each line, searching for the various components
+    regex_search_string = "Plate:\sOD600"
+    # regex_search_string = "Group:\s+Results Kinetic\s+1"
+    OD600_plate_is_found = False
+    OD600_plate_line = 0
+    first_line_with_OD600_data_int = None
+    first_line_with_OD600_data = None
+
+    with open(txt_path, "r") as f:
+        for n, line in enumerate(f):
+            match = re.match(regex_search_string, line)
+            if match:
+                OD600_plate_is_found = True
+                OD600_plate_line = n
+                first_line_with_OD600_data_int = OD600_plate_line + 2
+            if n == first_line_with_OD600_data_int:
+                first_line_with_OD600_data = line
+    total_n_lines = n
+
+    table_start = first_line_with_OD600_data_int
+    table_end = first_line_with_OD600_data_int + 8
+    skipfooter = total_n_lines - table_end + 1
+
+    if "," in first_line_with_OD600_data:
+        decimal = ","
+    elif "." in first_line_with_OD600_data:
+        decimal = "."
+    df = pd.read_table(txt_path, skiprows=table_start, sep='\s+', decimal=decimal, header=None, skipfooter=skipfooter, engine="python")
+
+    """
+    OD600 data now looks something like this.
+    The temperature in row 0 puts everything out of order.
+
+            0       1       2       3       4       5       6       7       8        9       10      11      12
+    0  24.1000  0.1094  0.1322  0.1210  0.1170  0.1214  0.1239  0.1128  0.1219   0.1191  0.1152  0.1172  0.116
+    1   0.1530  0.1564  0.1582  0.1518  0.1636  0.1528  0.1448  0.1651  0.1371   0.1484  0.1491  0.1509     Na
+    2   0.1194  0.1218  0.1266  0.1200  0.1171  0.1252  0.1155  0.1227  0.1230   0.1204  0.1221  0.1159     Na
+    3   0.1217  0.1237  0.1239  0.1190  0.1217  0.1245  0.1168  0.1241  0.1207   0.1168  0.1203  0.1203     Na
+    4   0.1152  0.1190  0.1402  0.1184  0.1443  0.1219  0.1193  0.1254  0.1206   0.1173  0.1167  0.1165     Na
+    5   0.1253  0.1313  0.1435  0.1232  0.1261  0.1298  0.1239  0.1315  0.1133   0.1193  0.1157  0.1178     Na
+    6   0.1136  0.1143  0.1359  0.1172  0.1373  0.1275  0.1159  0.1281  0.1224
+    7   0.1078  0.1206  0.1243  0.1139  0.1199  0.1229  0.1172  0.1210  0.1206   0.1195  0.1168  0.1143     Na
+    """
+    # fix up alignment in dataframe, rename columns and index
+    df.loc[0, :] = list(df.loc[0, 1:]) + [0]
+    df = df.loc[:, 0:11]
+    df.index = list("ABCDEFGH")
+    df.columns = range(1, 13)
+
+    """
+    OD600 data is ready for heatmap
+
+               1       2       3       4       5       6       7       8       9   \
+    A  0.1094  0.1322  0.1210  0.1170  0.1214  0.1239  0.1128  0.1219  0.1191
+    B  0.1530  0.1564  0.1582  0.1518  0.1636  0.1528  0.1448  0.1651  0.1371
+    C  0.1194  0.1218  0.1266  0.1200  0.1171  0.1252  0.1155  0.1227  0.1230
+    D  0.1217  0.1237  0.1239  0.1190  0.1217  0.1245  0.1168  0.1241  0.1207
+    E  0.1152  0.1190  0.1402  0.1184  0.1443  0.1219  0.1193  0.1254  0.1206
+    F  0.1253  0.1313  0.1435  0.1232  0.1261  0.1298  0.1239  0.1315  0.1133
+    G  0.1136  0.1143  0.1359  0.1172  0.1373  0.1275  0.1159  0.1281  0.1224
+    H  0.1078  0.1206  0.1243  0.1139  0.1199  0.1229  0.1172  0.1210  0.1206
+
+    """
+
+    ax = sns.heatmap(df)
+    fig = ax.get_figure()
+    # rotate the y-ticklabels
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    # set the x-axis labels on the top
+    ax.xaxis.tick_top()
+    fig.savefig(out_OD600_heatmap, dpi=240 )
+
+    """
+    OD600 heatmap is finished.
+    Now grab the kinetic data, which is presented in a table at the bottom of the text file.
+
+    This is the FORMAT OF THE INPUT SOFTMAX PRO FILE, at region of processed kinetic data
 
     ..... <----------- raw kinetic data is above. we currently use the sofmax pro calculated initial velocity
     ~End
