@@ -124,7 +124,7 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
         decimal = ","
     elif "." in first_line_with_OD600_data:
         decimal = "."
-    df = pd.read_table(txt_path, skiprows=table_start, sep='\s+', decimal=decimal, header=None, skipfooter=skipfooter)
+    df = pd.read_table(txt_path, skiprows=table_start, sep='\s+', decimal=decimal, header=None, skipfooter=skipfooter, engine="python")
 
     """
     OD600 data now looks something like this.
@@ -160,9 +160,12 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
     H  0.1078  0.1206  0.1243  0.1139  0.1199  0.1229  0.1172  0.1210  0.1206
 
     """
+    tum_blue4_as_python_color = np.array([0, 82, 147]) / 255
+    cmap = sns.light_palette(tum_blue4_as_python_color, as_cmap=True)
+
     plt.close("all")
     fig, ax = plt.subplots()
-    ax = sns.heatmap(df, ax=ax, vmin=0.075)
+    ax = sns.heatmap(df, ax=ax, cmap=cmap, vmin=0.075)
     ax.get_figure()
     # rotate the y-ticklabels
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
