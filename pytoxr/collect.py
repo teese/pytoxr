@@ -172,7 +172,7 @@ def collect_data_in_folder(target_dir):
         ax = df_sel.plot(marker="o", linestyle="", alpha=0.5, figsize=(8, 12))
         ax.set_xticks(range(df_sel.shape[0]))
         ax.set_xticklabels(df_sel.index, rotation=90)
-        ax.set_ylim(0, 6)
+        #ax.set_ylim(0, 6)
         ax.set_xlim(-1, df_sel.shape[0] + 1)
         ax.set_title(title)
         ax.set_ylabel(y_axis_label)

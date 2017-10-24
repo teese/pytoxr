@@ -124,7 +124,7 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
         decimal = ","
     elif "." in first_line_with_OD600_data:
         decimal = "."
-    df = pd.read_table(txt_path, skiprows=table_start, sep='\s+', decimal=decimal, header=None, skipfooter=skipfooter, engine="python")
+    df = pd.read_table(txt_path, skiprows=table_start, sep='\s+', decimal=decimal, header=None, skipfooter=skipfooter)
 
     """
     OD600 data now looks something like this.
