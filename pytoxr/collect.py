@@ -114,7 +114,19 @@ def collect_data_in_folder(target_dir):
     df.sort_values("order", inplace=True)
 
     ttest_standard_cols = ["{}||ttest_standard".format(n) for n in range(n)]
-    ttest_standard_columns = set(ttest_standard_cols).intersection(set(df.index))
+    #ttest_standard_columns = set(ttest_standard_cols).intersection(set(df.index))
+    ttest_standard_columns = set(ttest_standard_cols).intersection(set(df.columns))
+
+    # WEIRD NON-REPEATABLE DF.T EFFECT
+    # print("ttest_standard_cols", ttest_standard_cols)
+    # print("ttest_standard_columns", ttest_standard_columns)
+    # print("df.index", df.index)
+    # print("df.columns", df.columns)
+
+    from pytoxr.toolkit import aaa
+    aaa(df)
+
+
     # check that there are actually some ttest standards labelled
     if ttest_standard_columns != set():
         conduct_ttest = True
@@ -123,7 +135,8 @@ def collect_data_in_folder(target_dir):
         if df_ttest_standard.shape[0] == 1:
             ttest_standard = df_ttest_standard.index[0]
         else:
-            raise ValueError("seems to be more than one ttest_standard selected in the original sample excel files.")
+            raise ValueError("seems to be more than one ttest_standard selected in the original sample excel files."
+                             "df_ttest_standard.index = {}".format(df_ttest_standard.index))
     else:
         conduct_ttest = False
 
@@ -187,6 +200,8 @@ def collect_data_in_folder(target_dir):
         #df_sel_describe["std"] = df_sel_describe["std"].fillna(0)
         df_sel_describe["sem"] = df_sel_describe["std"] / np.sqrt(df_sel_describe["count"])
         df_sel_describe["order"] = order_ser
+
+        print("conduct_ttest", conduct_ttest)
 
         if conduct_ttest:
             # get the standard "wildtype" data for the TTEST
