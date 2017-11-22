@@ -404,6 +404,30 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
             dfn[Vm] = row_series / standard_mean_values_ser
 
         dfn = dfn.T
+
+        """ Norm dataframe has problem in that the Std is 1 for the standard. (norm to standard, not std/mean_of_standard)
+        This is fixed as below.
+                    OD2        OD3   OD_mean     OD_std        Vi1        Vi2  \
+        Vm01          1          1         1          1          1          1   
+        Vm17    1.09716   0.692331  0.966009    3.70093    3.08974    2.61241   
+        Vm25    0.19164     1.3053  0.566228    8.62627   0.360652  -0.164633   
+        Vm02    1.30523    1.44421   1.41189  0.0739331   0.045963  0.0785936   
+        """
+        datatypes = ["OD", "Vi", "MU"]
+        for datatype in datatypes:
+            std_column = dfd["{}_std".format(datatype)]
+            std_normed = std_column / standard_mean_values_ser["{}_mean".format(datatype)]
+            # replace the column in dfn
+            dfn["{}_std".format(datatype)] = std_normed
+
+        """std is corrected, and should now look like this (a value other than 1 for the standard!)
+        
+                    Vi3    Vi_mean    Vi_std   Vm error include_data order sample  
+        Vm01          1          1  0.117211  NaN   NaN            1     1    NaN  
+        Vm17    2.56545    2.75133  0.369209  NaN   NaN            1     2    NaN  
+        Vm25   0.201911   0.114587  0.273156  NaN   NaN            0     3    NaN  
+        """
+
         for transferred_col in ["sample", "order", "Vm", "include_data"]:
             dfn[transferred_col] = dfd[transferred_col]
         dfn = dfn.reindex(columns=col_order)
@@ -464,6 +488,14 @@ Plate:	OD600	1,3	PlateFormat	Endpoint	Absorbance	Raw	TRUE	1						1	600	1	12	96	1
         dropped_cols = ["include_data", "error"]
         dfnu.drop(dropped_cols, axis=1, inplace=True)
 
+        ttest_standard_true_selection = dfs[dfs.ttest_standard == True]
+        ttest_standard_samplename = ttest_standard_true_selection["sample"].unique()[0]
+        if ttest_standard_samplename == standard_sample_name:
+            sys.stdout.write("\n--------------------------------------------------------------------"
+                             "Sorry, script is currently not designed to handle situations where"
+                             "the TTEST standard is the same as the norm standard. TTEST results should be ignored. "
+                             "Talk to Mark.------------------------------------------------------------------------\n")
+
         ttest_standard_array = dfs.loc[dfs.ttest_standard == True].sample_python.unique()
         if len(ttest_standard_array) == 1:
             ttest_standard = ttest_standard_array[0]
@@ -515,11 +547,9 @@ def parse_all_data_files_in_folder(target_dir, reparse_existing=False):
     """
     txt_file_list = glob.glob(os.path.join(target_dir, "*.txt"))
 
-    #print(txt_file_list)
     counter = 0
 
     for txt_file in txt_file_list:
-        #print(txt_file)
         pda_file_path = txt_file[:-4] + ".pda"
         samples_file_path = txt_file[:-4] + ".xls"
         exp_name = os.path.basename(txt_file)[:-4][0:60]
