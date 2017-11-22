@@ -117,15 +117,11 @@ def collect_data_in_folder(target_dir):
     #ttest_standard_columns = set(ttest_standard_cols).intersection(set(df.index))
     ttest_standard_columns = set(ttest_standard_cols).intersection(set(df.columns))
 
-    # WEIRD NON-REPEATABLE DF.T EFFECT
+    # WEIRD NON-REPEATABLE DF.T EFFECT TROUBLESHOOTING
     # print("ttest_standard_cols", ttest_standard_cols)
     # print("ttest_standard_columns", ttest_standard_columns)
     # print("df.index", df.index)
     # print("df.columns", df.columns)
-
-    from pytoxr.toolkit import aaa
-    aaa(df)
-
 
     # check that there are actually some ttest standards labelled
     if ttest_standard_columns != set():
@@ -201,7 +197,7 @@ def collect_data_in_folder(target_dir):
         df_sel_describe["sem"] = df_sel_describe["std"] / np.sqrt(df_sel_describe["count"])
         df_sel_describe["order"] = order_ser
 
-        print("conduct_ttest", conduct_ttest)
+        print("conduct_ttest = {}".format(conduct_ttest))
 
         if conduct_ttest:
             # get the standard "wildtype" data for the TTEST
