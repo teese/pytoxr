@@ -55,3 +55,32 @@ def aaa(df_or_series):
         df_or_series = df_or_series.to_frame()
     csv_out = r"D:\data\000_aaa_temp_df_out.csv"
     df_or_series.to_csv(csv_out, sep=",", quoting=csv.QUOTE_NONNUMERIC)
+
+
+def extract_aa_pos_from_sample_names(df_with_sn_as_index, start_aa, end_aa, newcol_name):
+    """Extract the amino acid position from sample names in the index of a dataframe.
+
+    Note this cannot be used if the data contains double-mutants. Consider using a dictionary approach instead.
+
+    Parameters
+    ----------
+    df_with_sn_as_index : dataframe with the sample name as the index
+        Dataframe to be altered, will be returned with the new column
+    start_aa : int, starting amino acid in range of amino acids mutated
+        UniProt style, NOT python indexing style
+    end_aa : int, end amino acid in range of amino acids mutated
+        UniProt style where the number is the last aa to be included, NOT python indexing style
+    newcol_name : name of the new column containing the index
+
+    Returns
+    -------
+    df_with_sn_as_index : original dataframe, with the new column
+    """
+
+    for i in range(start_aa,end_aa+1):
+        # for each sample name in the dataframe with unique samples
+        for sn in df_with_sn_as_index.index:
+            # if the amino acid number (233, 234, etc) is in the sample name
+            if str(i) in sn:
+                # add the amino acid number to a new column
+                df_with_sn_as_index.loc[sn, newcol_name] = i

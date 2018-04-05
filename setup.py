@@ -29,4 +29,4 @@ setup(name='pytoxr',
       platforms=['ALL'],
       keywords=["ToxR", "transmembrane", "TOXCAT", "TMD", "homodimer",
                 "GALLEX", "AraTM", "BacTH"],
-      version='0.0.1')
+      version='0.0.2')

@@ -8,4 +8,4 @@ Copyright (C) 2016  Mark George Teese
 This software is licensed under the permissive MIT License.
 """
 
-# figures plotted for each experiment can be put here.
+# figures plotted for each experimen1t can be put here.
