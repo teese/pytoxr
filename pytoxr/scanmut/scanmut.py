@@ -96,19 +96,6 @@ def run_scanmut(settings_file, show_barchart=False, save_pdf=True):
         # set the index according to user input
         AAA_array = np.array(df_settings)
 
-        def aaa(df_or_series):
-            # convert any series to dataframe
-            if isinstance(df_or_series, pd.Series):
-                df_or_series = df_or_series.to_frame()
-            excel_out = r"D:\data\000_aaa_temp_df_out.xlsx"
-            writer = pd.ExcelWriter(excel_out)
-            df_or_series.to_excel(writer)
-            writer.save()
-            writer.close()
-
-        aaa(df_settings)
-        aaa(df)
-
         if df_settings.loc[row, "index column"] != "":
             if df_settings.loc[row, "index column"] in df.columns:
                 df.set_index(df_settings.loc[row, "index column"], drop=False, inplace=True)

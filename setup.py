@@ -22,7 +22,7 @@ Classifier: Operating System :: OS Independent
 
 setup(name='pytoxr',
       author='Mark Teese',
-      author_email='mark.teese /at/ tum.de',
+      author_email='mark.teese /-at-/ tum /-dot-/ de',
       license='MIT',
       packages=find_packages(),
       classifiers=classifiers.splitlines(),

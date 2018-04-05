@@ -84,3 +84,38 @@ def extract_aa_pos_from_sample_names(df_with_sn_as_index, start_aa, end_aa, newc
             if str(i) in sn:
                 # add the amino acid number to a new column
                 df_with_sn_as_index.loc[sn, newcol_name] = i
+
+
+
+def calc_av_over_3aa_window(df, data_col, new_col, n_aa = 4):
+    ''' Function to average the properties of an amino acid (conservation, disruption, etc) across a window, consisting
+    of three amino acids on the same side of an alpha helix (i, i-4, i+4)
+    INPUTS:
+    df: dataframe
+    data_col: string showing the column name, which contains the data to be averaged
+    new_col: string for the new column name, containing the average
+    n_aa: number of amino acids separating the aa. Default = 4 (e.g. i, i-4, i+4)
+    OUTPUTS:
+    The original dataframe, with an extra column.
+    '''
+    import numpy as np
+    # iterate over each row of the dataframe
+    for aa_pos in df.index:
+        # define the central datapoint
+        disrupt_centre = df.loc[aa_pos,data_col]
+        # define the "left" N-term datapoint (e.g. i-4)
+        if aa_pos-n_aa in df.index:
+            disrupt_left = df.loc[aa_pos-n_aa,data_col]
+        else:
+            disrupt_left = np.nan
+        # define the "right" C-term datapoint (e.g. i+4)
+        if aa_pos+n_aa in df.index:
+            disrupt_right = df.loc[aa_pos+n_aa,data_col]
+        else:
+            disrupt_right = np.nan
+        # calc average
+        av_disrupt = np.nanmean([disrupt_centre, disrupt_left, disrupt_right])
+        #print(aa_pos, disrupt_centre, disrupt_left, disrupt_right)
+        # add average to dataframe
+        df.loc[aa_pos,new_col] = av_disrupt
+    return df
