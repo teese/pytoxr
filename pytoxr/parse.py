@@ -571,3 +571,84 @@ def parse_all_data_files_in_folder(target_dir, reparse_existing=False):
 
     sys.stdout.write("\n\nparse_all_data_files_in_folder is finished.\n{} file(s) parsed in total.\n-----------------------------------------------------------------\n".format(counter))
     sys.stdout.flush()
+
+
+def contains_kw(string):
+    control_keywords = ["GpA", "dTM", "AZ2"]
+    for kw in control_keywords:
+        if kw in string:
+            return True
+    return False
+
+def extract_mut_names_from_collected_data(collected_xls, scan_mut_xlsx, stat_method="mean"):
+    """Parses the collected.xls file with ToxR data so that it can be used as input
+    for scanning mutagenesis barchart creation.
+
+    Parameters
+    ----------
+    collected_xls : str
+        Path to input collected.xls
+    scan_mut_xlsx : str
+        Path to output scan_mut.xlsx
+    """
+
+    df_coll = pd.read_excel(collected_xls, sheetname="Vi_describe")
+
+    """ df_coll looks like this
+                        count      mean       std       min       25%       50%       75%       max       sem  order
+    P02724-0_GpA_wt         7  1.000000  0.000000  1.000000  1.000000  1.000000  1.000000  1.000000  0.000000      1
+    AZ2                     7  0.761144  0.061944  0.631301  0.760551  0.775837  0.786084  0.827599  0.023413      2
+    P02724-0_GpA_G83A       7  0.376627  0.204756  0.088955  0.252525  0.295542  0.566675  0.613493  0.077390      3
+    dTM                     7  0.036521  0.021639  0.005306  0.028094  0.036204  0.040399  0.077153  0.008179      4
+    Q6ZRP7-2_QSOX2_wt       7  0.906791  0.410194  0.528483  0.606863  0.811692  1.051753  1.690128  0.155039      5
+    Q6ZRP7-2_QSOX2_C1S      5  0.880809  0.143449  0.773950  0.791562  0.836428  0.874484  1.127623  0.064153      7
+    
+    """
+    # identify common controls and remove them from the sample list
+    df_coll["name"] = df_coll.index
+    df_coll["contains_kw"] = df_coll["name"].apply(contains_kw).tolist()
+    df_coll = df_coll.loc[~df_coll["contains_kw"]].copy()
+
+    # extract orig_aa, final_aa, aa_position etc from the full sample name (e.g. Q6ZRP7-2_QSOX2_C1S)
+    df_coll["mut"] = df_coll["name"].str.split("_").str[-1]
+    df_coll["orig_aa"] = df_coll["mut"].str[0]
+    df_coll["target_aa"] = df_coll["mut"].str[-1]
+    df_coll["aa_position_unit"] = df_coll["mut"].str[1:-1]
+
+    # assume that any name that contains "wt" is the wildtype.
+    wt_name = df_coll.loc[df_coll["name"].str.contains("wt")].index
+    # IMPORTANT. Get the value for the wildtype. Used to normalise all values to wt later.
+    wt_value = float(df_coll.loc[wt_name, stat_method])
+    # if more than one name has wt, raise an error
+    assert len(wt_name) == 1
+
+    # rename some values in the the wildtype row
+    df_coll.loc[wt_name, "orig_aa"] = "WT"
+    df_coll.loc[wt_name, "target_aa"] = "B"
+    df_coll.loc[wt_name, "aa_position_unit"] = "0"
+
+    """df_coll now looks something like this:
+                        count      mean       std       min       25%       50%       75%       max       sem  order                name  contains_kw  mut orig_aa target_aa aa_position_unit
+    Q6ZRP7-2_QSOX2_wt       7  0.906791  0.410194  0.528483  0.606863  0.811692  1.051753  1.690128  0.155039      5   Q6ZRP7-2_QSOX2_wt        False   wt      WT         B                0
+    Q6ZRP7-2_QSOX2_C1S      5  0.880809  0.143449  0.773950  0.791562  0.836428  0.874484  1.127623  0.064153      7  Q6ZRP7-2_QSOX2_C1S        False  C1S       C         S                1
+    Q6ZRP7-2_QSOX2_V2A      5  0.737907  0.259606  0.553112  0.555503  0.569161  0.883270  1.128490  0.116099      8  Q6ZRP7-2_QSOX2_V2A        False  V2A       V         A                2
+    """
+    # take only the desired columns
+    df = df_coll[["count", "mean", "median", "std", "sem", "orig_aa", "target_aa", "aa_position_unit", "ttest_p_value"]].copy()
+
+    # normalise the mean, median, standard-deviation and SEM to the wildtype value
+    for col in ["mean", "median", "std", "sem"]:
+        df[col] = df[col] / wt_value
+
+    # rename columns according to a dictionary
+    rename_dict = {"std": "SD", "sem": "SE", "count": "Rep", stat_method: "perc_WT", "aa_position_unit": "amino acid position",
+                   "orig_aa": "original amino acid", "target_aa": "final amino acid", "ttest_p_value" : "p_value"}
+    df.rename(columns=rename_dict, inplace=True)
+    # some graphs need a p-value
+    if "p_value" not in df.columns:
+        df["p_value"] = 1
+    df.index = range(df_coll.shape[0])
+
+    df.to_excel(scan_mut_xlsx)
+
+    print("extract_mut_names_from_collected_data is finished")

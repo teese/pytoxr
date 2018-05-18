@@ -67,7 +67,7 @@ def run_scanmut(settings_file, show_barchart=False, save_pdf=True):
     df_settings.loc[:,"infile"] = df_settings.loc[:,"infile"].apply(lambda x: os.path.normpath(x))
 
     for row in df_settings[df_settings.run_scanmut == True].index:
-        sys.stdout.write("\n" + df_settings.loc[row,"short experiment title"])
+        sys.stdout.write("\n{}\n".format(df_settings.loc[row,"short experiment title"]))
 
         ###############################################################################################
         #                                                                                             #

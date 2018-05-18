@@ -136,7 +136,7 @@ def collect_data_in_folder(target_dir):
     else:
         conduct_ttest = False
 
-    mean_column_list = ["{}||OD_mean", "{}||Vi_mean", "{}||MU_mean"]
+    data_type_list = ["{}||OD_mean", "{}||Vi_mean", "{}||MU_mean"]
     writer = pd.ExcelWriter(collected_excel)
 
     data_is_normalised = True
@@ -151,17 +151,16 @@ def collect_data_in_folder(target_dir):
     y_axis_label_dict = {"OD": "OD600{}".format(norm_string), "Vi": "Initial Velocity (Vi, U/min){}".format(norm_string), "MU": "Miller Units (U/min/OD600){}".format(norm_string)}
 
 
-    for mean_col in mean_column_list:
+    for data_type in data_type_list:
 
-        excel_tab_name = mean_col.split("||")[1].split("_")[0]
+        excel_tab_name = data_type.split("||")[1].split("_")[0]
         title = titles_dict[excel_tab_name]
         y_axis_label = y_axis_label_dict[excel_tab_name]
 
         scatter_path = os.path.join(collect_out_dir, "{}_scatter_plot.png".format(excel_tab_name))
-        bar_path = os.path.join(collect_out_dir, "{}_bar_plot.png".format(excel_tab_name))
         box_path = os.path.join(collect_out_dir, "{}_box_plot.png".format(excel_tab_name))
 
-        selected_cols = [mean_col.format(n) for n in range(n)]
+        selected_cols = [data_type.format(n) for n in range(n)]
         df_sel = df[selected_cols].copy()
         df_sel.columns = exp_name_list
         df_sel.to_excel(writer, sheet_name=excel_tab_name)
@@ -199,15 +198,18 @@ def collect_data_in_folder(target_dir):
 
         print("conduct_ttest = {}".format(conduct_ttest))
 
-        if conduct_ttest:
-            # get the standard "wildtype" data for the TTEST
-            ttest_standard_data = df_sel.loc[ttest_standard, :]
+        sample_list = df_sel.index.tolist()
 
-            samples_to_run_ttest = df_sel.index.tolist()
-            samples_to_run_ttest.remove(ttest_standard)
+        for sample_name in sample_list:
+            data = df_sel.loc[sample_name, :].dropna()
+            # get the median. Note that the median of [1,2,3,40] is 2.5.
+            df_sel_describe.loc[sample_name, "median"] = data.median()
 
-            for sample_name in samples_to_run_ttest:
-                data = df_sel.loc[sample_name, :].dropna()
+            if conduct_ttest and sample_name != ttest_standard:
+                # get the standard "wildtype" data for the TTEST
+                ttest_standard_data = df_sel.loc[ttest_standard, :]
+                #sample_list.remove(ttest_standard)
+
                 if len(data) > 1 and len(ttest_standard_data) > 1:
                     p_value = ttest_ind(ttest_standard_data, data)[1]
                 else:
@@ -222,64 +224,68 @@ def collect_data_in_folder(target_dir):
         min_value = df_sel_describe["min"].max()
 
         """
-        df_describe now looks like this, with an added SEM column
+        df_describe now looks like this
 
-                           count      mean       std       min       25%       50%     75%       max       sem    order	ttest_p_value	ttest_significant
-        P02724-0_GpA_wt    9.0    0.941860  0.240440  0.534229  0.814460  0.951131 1.083051  1.283975  0.080147
-        AZ2                9.0    1.840148  1.636164  0.440827  0.873842  1.280322 2.377500  5.627452  0.545388
-        P02724-0_GpA_G83A  9.0    0.300818  0.115861  0.065281  0.255449  0.307162 0.363402  0.470126  0.038620
-        dTM                9.0    0.084894  0.148256 -0.017234  0.027387  0.043760 0.063469  0.473288  0.049419
-        Q6ZRP7-2_QSOX2_wt  9.0    1.000000  0.000000  1.000000  1.000000  1.000000 1.000000  1.000000  0.000000
+                           count      mean       std       min       25%       50%       75%       max       sem  order    median  ttest_p_value sign_stars  ttest_significant
+        P02724-0_GpA_wt     14.0  1.000000  0.000000  1.000000  1.000000  1.000000  1.000000  1.000000  0.000000    1.0  1.000000       0.000073        ***               True
+        AZ2                 13.0  1.163821  0.314529  0.964444  1.037625  1.065475  1.173914  2.167819  0.087235    2.0  1.065475       0.918356        NaN              False
+        P02724-0_GpA_G83A   12.0  1.246863  0.466768  0.840600  1.052239  1.132847  1.236926  2.672585  0.134744    3.0  1.132847       0.578728        NaN              False
+        dTM                 13.0  1.372324  0.462053  1.015609  1.067898  1.100609  1.624869  2.466696  0.128151    4.0  1.100609       0.135864        NaN              False
+        Q6ZRP7-2_QSOX2_wt   14.0  1.173372  0.137769  0.926538  1.134087  1.155864  1.232545  1.403153  0.036820    5.0  1.155864            NaN        NaN              False
 
         """
-        plt.close("all")
-        # fig = plt.Figure(figsize=(5,10))
-        ax = df_sel_describe["mean"].plot(kind="bar", figsize=(8, 12), yerr=df_sel_describe['sem'])
-        #
-        # sign_ = df_sel_describe["sign_stars"].copy()
-        # sign_ser.index = range(sign_ser.shape[0])
-        # sign_ser.dropna(inplace=True)
+        # plot barchart with two averaging methods, mean and median
+        for stat_method in ["mean", "median"]:
+
+            bar_path = os.path.join(collect_out_dir, "{}_{}_bar_plot.png".format(excel_tab_name, stat_method))
+            plt.close("all")
+            # fig = plt.Figure(figsize=(5,10))
+            ax = df_sel_describe[stat_method].plot(kind="bar", figsize=(8, 12), yerr=df_sel_describe['sem'])
+            #
+            # sign_ = df_sel_describe["sign_stars"].copy()
+            # sign_ser.index = range(sign_ser.shape[0])
+            # sign_ser.dropna(inplace=True)
 
 
-        if conduct_ttest:
-            df_sel_describe["#"] = range(1, df_sel_describe.shape[0] + 1)
-            sign_df = df_sel_describe.dropna(subset=["sign_stars"])
+            if conduct_ttest:
+                df_sel_describe["#"] = range(1, df_sel_describe.shape[0] + 1)
+                sign_df = df_sel_describe.dropna(subset=["sign_stars"])
 
-            for sample in sign_df.index:
-                x = sign_df.loc[sample, "#"] - 1
-                y = sign_df.loc[sample, "mean"]
-                sign_star = sign_df.loc[sample, "sign_stars"]
-                ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
-        ax.set_title(title)
-        ax.set_ylabel(y_axis_label)
-        #ax.errorbar(range(df_sel_describe.shape[0]), df_sel_describe['mean'], yerr=df_sel_describe['sem'])
+                for sample in sign_df.index:
+                    x = sign_df.loc[sample, "#"] - 1
+                    y = sign_df.loc[sample, stat_method]
+                    sign_star = sign_df.loc[sample, "sign_stars"]
+                    ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
+            ax.set_title(title)
+            ax.set_ylabel(y_axis_label)
+            #ax.errorbar(range(df_sel_describe.shape[0]), df_sel_describe['mean'], yerr=df_sel_describe['sem'])
 
-        plt.tight_layout()
-        plt.savefig(bar_path, dpi=240)
-        plt.savefig(bar_path[:-4] + ".pdf")
-        plt.close("all")
+            plt.tight_layout()
+            plt.savefig(bar_path, dpi=240)
+            plt.savefig(bar_path[:-4] + ".pdf")
+            plt.close("all")
 
-        meanpointprops = dict(marker='o', markerfacecolor='black', markersize=2)  # markeredgecolor='0.75',
-        fig, ax = plt.subplots(figsize=(7, 10))
-        df_sel.T.plot(kind="box", whis=1500, showmeans=True, meanprops=meanpointprops, showfliers=True, ax=ax)
-        ax.set_xticklabels(df_sel.index, rotation=90)
-        ax.set_title(title)
-        ax.set_ylabel(y_axis_label)
+            meanpointprops = dict(marker='o', markerfacecolor='black', markersize=2)  # markeredgecolor='0.75',
+            fig, ax = plt.subplots(figsize=(7, 10))
+            df_sel.T.plot(kind="box", whis=1500, showmeans=True, meanprops=meanpointprops, showfliers=True, ax=ax)
+            ax.set_xticklabels(df_sel.index, rotation=90)
+            ax.set_title(title)
+            ax.set_ylabel(y_axis_label)
 
-        if conduct_ttest:
-            for sample in sign_df.index:
-                x = sign_df.loc[sample, "#"]
-                y = sign_df.loc[sample, "75%"]
-                sign_star = sign_df.loc[sample, "sign_stars"]
-                ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
-        if data_is_normalised:
-            if max_value > 6:
-                ylim_min = ax.get_ylim()[0]
-                ax.set_ylim(ylim_min,6)
-        plt.tight_layout()
-        plt.savefig(box_path, dpi=240)
-        plt.savefig(box_path[:-4] + ".pdf")
-        plt.close("all")
+            if conduct_ttest:
+                for sample in sign_df.index:
+                    x = sign_df.loc[sample, "#"]
+                    y = sign_df.loc[sample, "75%"]
+                    sign_star = sign_df.loc[sample, "sign_stars"]
+                    ax.annotate(sign_star, [x - 0.18, y + 0.005], horizontalalignment='center')
+            if data_is_normalised:
+                if max_value > 6:
+                    ylim_min = ax.get_ylim()[0]
+                    ax.set_ylim(ylim_min,6)
+            plt.tight_layout()
+            plt.savefig(box_path, dpi=240)
+            plt.savefig(box_path[:-4] + ".pdf")
+            plt.close("all")
 
     sys.stdout.write("\n\ncollect_data_in_folder is finished.\Data from {} files collected in total.\n-----------------------------------------------------------------\n".format(n+1))
     sys.stdout.flush()
