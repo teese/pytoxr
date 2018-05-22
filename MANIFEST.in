@@ -1,0 +1,7 @@
+include MANIFEST.in
+include readme.rst
+recursive-include examples *.pda
+recursive-include examples *.txt
+recursive-include examples *.xls
+recursive-include fit_to_sine *.xlsx
+recursive-include fit_to_sine *.txt
