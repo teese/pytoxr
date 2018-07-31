@@ -29,7 +29,7 @@ Topic :: Scientific/Engineering :: Chemistry
 setup(name='pytoxr',
 	author="Mark Teese",
     url="https://github.com/teese/pytoxr",
-    download_url = 'https://github.com/teese/pytoxr/archive/0.0.6.tar.gz',
+    download_url = 'https://github.com/teese/pytoxr/archive/0.0.7.tar.gz',
     author_email="mark.teese@checkmytumhomepage.de",
     description = "Tools for the analysis of data from ToxR experiments.",
     long_description=long_description,
@@ -40,4 +40,4 @@ setup(name='pytoxr',
     keywords="ToxR transmembrane TOXCAT TMDhomodimer GALLEX AraTM BacTH",
 	project_urls={'LangoschLab':'http://cbp.wzw.tum.de/index.php?id=9', "TU_Munich":"https://www.tum.de"},
     install_requires=["pandas", "numpy", "matplotlib", "scipy", "seaborn", "eccpy"],
-    version='0.0.6')
+    version='0.0.7')

@@ -16,7 +16,7 @@ import numpy as np
 import scipy.optimize
 import os
 import pandas as pd
-from korbinian.utils import create_colour_lists
+from pytoxr.plot import create_colour_lists
 import pytoxr.mathfunctions as mathfunctions
 
 def fit_sin_to_data(x, y, title, output_folder, output_base_filename, fit_unbiased=True, fit_alphahelix=True,x_grid=True,savefig=True, savecsv=True, saveexcel=True):
